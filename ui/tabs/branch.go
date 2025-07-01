@@ -3,6 +3,11 @@ package tabs
 import (
 	"errors"
 	"fmt"
+	"log"
+	"net"
+	"strings"
+	"time"
+
 	"github.com/aprokopczyk/mergemate/pkg/gitlab"
 	"github.com/aprokopczyk/mergemate/ui/colors"
 	"github.com/aprokopczyk/mergemate/ui/context"
@@ -13,9 +18,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"
-	"log"
-	"net"
-	"time"
 )
 
 const lasCommitFormat = "2006-01-02 15:04:05"
@@ -92,6 +94,7 @@ func (m *BranchTable) listUsersBranches() tea.Msg {
 
 func (m *BranchTable) createMergeRequest(sourceBranch string, targetBranch string, title string) tea.Cmd {
 	return func() tea.Msg {
+		title = shortenTitle(title)
 		mergeRequest, err := m.context.GitlabClient.CreateMergeRequest(sourceBranch, targetBranch, title)
 
 		if errors.Is(err, gitlab.MergeRequestAlreadyExists) {
@@ -111,6 +114,19 @@ func (m *BranchTable) createMergeRequest(sourceBranch string, targetBranch strin
 			mergeRequest: *mergeRequest,
 		}
 	}
+}
+
+func shortenTitle(title string) string {
+	idx := strings.IndexByte(title, '\n')
+	if idx != -1 {
+		title = title[:idx]
+	}
+
+	if len(title) > 255 {
+		return title[:250] + "..."
+	}
+
+	return title
 }
 
 func (m *BranchTable) Init() tea.Cmd {
